@@ -1,92 +1,91 @@
 using UnityEngine;
+using UnityEngine.UI;  // Add this to access the UI Text element
 
-public class PlayerController : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
-    public float moveSpeed = 5f; // Speed of movement
-    public float jumpHeight = 2f; // Height of the jump
-    public float gravity = -9.81f; // Gravity force
-    public float mouseSensitivity = 300f; // Sensitivity of mouse
-    public Transform cameraTransform; // Reference to the camera
-
     private CharacterController controller;
     private Vector3 velocity;
+
+    [Header("Movement Settings")]
+    public float walkSpeed = 5f;
+    public float sprintSpeed = 10f;
+    public float jumpHeight = 2f;
+    public float gravity = -9.81f;
+
+    [Header("Camera Reference")]
+    public Transform cameraTransform; // Assign CameraFollow in Inspector
+
+    private float speed;
     private bool isGrounded;
-    private float xRotation = 0f; // Tracks vertical rotation of the camera
+
+    [Header("Donut Collecting")]
+    public int donutCount = 0;  // Counter for collected donuts
+    public Text donutCountText;  // Reference to the UI Text element
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
-        if (controller == null)
-        {
-            Debug.LogError("No CharacterController found on the GameObject!");
-        }
-
-        if (cameraTransform == null)
-        {
-            Debug.LogError("No cameraTransform assigned! Please drag your camera into the script's cameraTransform field.");
-        }
-
-        // Hide and lock the cursor
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        speed = walkSpeed;
     }
 
     void Update()
     {
-        if (controller == null || cameraTransform == null)
-        {
-            return; // Exit if setup is incomplete
-        }
-
-        // Handle looking around (camera rotation)
-        HandleMouseLook();
-
-        // Handle movement
-        HandleMovement();
-    }
-
-    void HandleMouseLook()
-    {
-        // Get mouse input
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
-
-        // Rotate the player horizontally
-        transform.Rotate(Vector3.up * mouseX);
-
-        // Rotate the camera vertically (clamped)
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f); // Prevent flipping the camera
-        cameraTransform.localRotation = Quaternion.Euler(xRotation, 0, 0);
-    }
-
-    void HandleMovement()
-    {
-        // Ground check
+        // Ground Check
         isGrounded = controller.isGrounded;
         if (isGrounded && velocity.y < 0)
+            velocity.y = -2f;
+
+        // Get Movement Input
+        float moveX = Input.GetAxis("Horizontal");
+        float moveZ = Input.GetAxis("Vertical");
+
+        // Move relative to camera direction
+        Vector3 move = cameraTransform.forward * moveZ + cameraTransform.right * moveX;
+        move.y = 0; // Prevent unintended vertical movement
+
+        // Rotate Player
+        if (move.magnitude > 0.1f)
         {
-            velocity.y = -2f; // Reset velocity when grounded
+            Quaternion targetRotation = Quaternion.LookRotation(move);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
         }
-
-        // Movement input
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
-
-        // Move relative to the player's forward direction
-        Vector3 move = transform.right * horizontal + transform.forward * vertical;
 
         // Apply movement
-        controller.Move(move * moveSpeed * Time.deltaTime);
+        controller.Move(move.normalized * speed * Time.deltaTime);
+
+        // Sprinting
+        speed = Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : walkSpeed;
 
         // Jumping
-        if (Input.GetButtonDown("Jump") && isGrounded)
-        {
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        }
 
-        // Apply gravity
+        // Apply Gravity
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+
+        // Collect Donuts on E key press
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            // Check if there is a nearby collectible donut
+            Collider[] hitColliders = Physics.OverlapSphere(transform.position, 2f);
+            foreach (var hitCollider in hitColliders)
+            {
+                if (hitCollider.CompareTag("Donut"))
+                {
+                    CollectDonut(hitCollider.gameObject);
+                }
+            }
+        }
+
+        // Update the UI Text to show the donut count
+        donutCountText.text = "Donuts Collected: " + donutCount;
+    }
+
+    // Method to collect the donut
+    void CollectDonut(GameObject donut)
+    {
+        donutCount++;  // Increase the donut count
+        Destroy(donut);  // Remove the collected donut
     }
 }
