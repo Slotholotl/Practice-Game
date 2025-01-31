@@ -1,34 +1,11 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class Interactable : MonoBehaviour
+public class Donut : MonoBehaviour
 {
-    public string itemName = "Donut;";
-    private bool isPlayerInRange = false;
-    
-    private void OnTriggerEnter(Collider other)
+    // Optionally, add behavior for the donut (e.g., effects on collection)
+    void Start()
     {
-        if (other.CompareTag("Player"))
-        {
-            isPlayerInRange = true;
-        }
+        // Set the donut's tag to "Donut"
+        gameObject.tag = "Donut";
     }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.CompareTag("Player"))
-        {
-            isPlayerInRange = false;
-        }
-    }
-
-    public bool CanBePickedUp()
-    {
-        return isPlayerInRange;
-    }
-
 }
-
-
-
