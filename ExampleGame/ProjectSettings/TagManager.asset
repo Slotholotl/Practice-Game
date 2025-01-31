@@ -6,11 +6,13 @@ TagManager:
   tags:
   - NPC1
   - Collectable
+  - Pickable
+  - Donut
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Player
   - Water
   - UI
   - 
